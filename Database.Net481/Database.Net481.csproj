@@ -48,6 +48,7 @@
     <Compile Include="Core\DatabaseOptions.cs" />
     <Compile Include="Core\DatabaseProvider.cs" />
     <Compile Include="ORM\Cache\EntityMetadataCache.cs" />
+    <Compile Include="ORM\Mapping\DbValueConverter.cs" />
     <Compile Include="ORM\Metadata\ColumnMetadata.cs" />
     <Compile Include="ORM\Metadata\EntityMetadata.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
