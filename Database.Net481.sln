@@ -3,9 +3,26 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Express 15 for Windows Desktop
 VisualStudioVersion = 15.0.37530.8
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{9853E5AB-C908-4BE7-939F-B4C85ACAAF9A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Database.Net481", "Database.Net481\Database.Net481.csproj", "{64762178-6E0B-4843-8949-5C0F5C07EF3A}"
+EndProject
 Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{64762178-6E0B-4843-8949-5C0F5C07EF3A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{64762178-6E0B-4843-8949-5C0F5C07EF3A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{64762178-6E0B-4843-8949-5C0F5C07EF3A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{64762178-6E0B-4843-8949-5C0F5C07EF3A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{64762178-6E0B-4843-8949-5C0F5C07EF3A} = {9853E5AB-C908-4BE7-939F-B4C85ACAAF9A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0F9EF2B8-64AF-49CC-BCA8-7E8FD67B263A}
