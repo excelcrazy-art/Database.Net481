@@ -23,6 +23,28 @@
 }
 
 /*
+ 
+
+Core
+ └─ DatabaseOptions
+       설정
+
+Database
+ └─ DatabaseContext
+       연결/실행 컨텍스트
+
+Database.Interfaces
+ └─ IDbConnectionFactory
+       연결 생성 계약
+
+ORM
+ └─ Metadata / Mapping / Cache
+       객체 ↔ DB 매핑
+
+SQL
+ └─ ISqlDialect / Dialects
+       DB별 SQL 생성 
+    
  Database.Net481.sln
 │
 ├─ Database.Net481
