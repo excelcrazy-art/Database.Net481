@@ -55,8 +55,12 @@
     <Compile Include="ORM\Mapping\ParameterMapper.cs" />
     <Compile Include="ORM\Metadata\ColumnMetadata.cs" />
     <Compile Include="ORM\Metadata\EntityMetadata.cs" />
+    <Compile Include="ORM\Metadata\IndexMetadata.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Repositories\GenericRepository.cs" />
+    <Compile Include="Schema\Dialects\SqliteSchemaDialect.cs" />
+    <Compile Include="Schema\ISchemaDialect.cs" />
+    <Compile Include="Schema\SchemaGenerator.cs" />
     <Compile Include="SQL\Builders\DeleteSqlBuilder.cs" />
     <Compile Include="SQL\Builders\InsertSqlBuilder.cs" />
     <Compile Include="SQL\Builders\SelectSqlBuilder.cs" />

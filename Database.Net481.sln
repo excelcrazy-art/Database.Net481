@@ -13,6 +13,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Database.Net481.PostgreSql"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Database.Net481.Sqlite", "src\Database.Net481.Sqlite\Database.Net481.Sqlite.csproj", "{CDBF3EFC-758E-4B15-98C2-9F9BA884744C}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{10304D6C-F34C-489F-BB03-69BF4BD50648}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Database.Net481.ConsoleTest", "tests\Database.Net481.ConsoleTest\Database.Net481.ConsoleTest.csproj", "{01F576CF-2CFE-4474-9838-63EA223DC000}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -35,6 +39,10 @@ Global
 		{CDBF3EFC-758E-4B15-98C2-9F9BA884744C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CDBF3EFC-758E-4B15-98C2-9F9BA884744C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CDBF3EFC-758E-4B15-98C2-9F9BA884744C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{01F576CF-2CFE-4474-9838-63EA223DC000}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{01F576CF-2CFE-4474-9838-63EA223DC000}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{01F576CF-2CFE-4474-9838-63EA223DC000}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{01F576CF-2CFE-4474-9838-63EA223DC000}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -44,6 +52,7 @@ Global
 		{9C863757-B6E6-43DB-9583-54CE6EB7DF58} = {9853E5AB-C908-4BE7-939F-B4C85ACAAF9A}
 		{EF341E35-1E22-41DD-AB1B-88B14A6AC62B} = {9853E5AB-C908-4BE7-939F-B4C85ACAAF9A}
 		{CDBF3EFC-758E-4B15-98C2-9F9BA884744C} = {9853E5AB-C908-4BE7-939F-B4C85ACAAF9A}
+		{01F576CF-2CFE-4474-9838-63EA223DC000} = {10304D6C-F34C-489F-BB03-69BF4BD50648}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0F9EF2B8-64AF-49CC-BCA8-7E8FD67B263A}

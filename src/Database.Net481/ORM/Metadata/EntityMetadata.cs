@@ -30,5 +30,7 @@ namespace Database.Net481.ORM.Metadata
                     .ToList();
             }
         }
+
+        public List<IndexMetadata> Indexes { get; set; }
     }
 }
