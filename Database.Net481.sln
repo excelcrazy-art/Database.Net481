@@ -5,13 +5,13 @@ VisualStudioVersion = 15.0.37530.8
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{9853E5AB-C908-4BE7-939F-B4C85ACAAF9A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Database.Net481", "Database.Net481\Database.Net481.csproj", "{64762178-6E0B-4843-8949-5C0F5C07EF3A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Database.Net481", "src\Database.Net481\Database.Net481.csproj", "{64762178-6E0B-4843-8949-5C0F5C07EF3A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Database.Net481.Sqlite", "Database.Net481.Sqlite\Database.Net481.Sqlite.csproj", "{CDBF3EFC-758E-4B15-98C2-9F9BA884744C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Database.Net481.MariaDb", "src\Database.Net481.MariaDb\Database.Net481.MariaDb.csproj", "{9C863757-B6E6-43DB-9583-54CE6EB7DF58}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Database.Net481.MariaDb", "Database.Net481.MariaDb\Database.Net481.MariaDb.csproj", "{9C863757-B6E6-43DB-9583-54CE6EB7DF58}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Database.Net481.PostgreSql", "src\Database.Net481.PostgreSql\Database.Net481.PostgreSql.csproj", "{EF341E35-1E22-41DD-AB1B-88B14A6AC62B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Database.Net481.PostgreSql", "Database.Net481.PostgreSql\Database.Net481.PostgreSql.csproj", "{EF341E35-1E22-41DD-AB1B-88B14A6AC62B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Database.Net481.Sqlite", "src\Database.Net481.Sqlite\Database.Net481.Sqlite.csproj", "{CDBF3EFC-758E-4B15-98C2-9F9BA884744C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,10 +23,6 @@ Global
 		{64762178-6E0B-4843-8949-5C0F5C07EF3A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{64762178-6E0B-4843-8949-5C0F5C07EF3A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{64762178-6E0B-4843-8949-5C0F5C07EF3A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CDBF3EFC-758E-4B15-98C2-9F9BA884744C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CDBF3EFC-758E-4B15-98C2-9F9BA884744C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CDBF3EFC-758E-4B15-98C2-9F9BA884744C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CDBF3EFC-758E-4B15-98C2-9F9BA884744C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{9C863757-B6E6-43DB-9583-54CE6EB7DF58}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{9C863757-B6E6-43DB-9583-54CE6EB7DF58}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9C863757-B6E6-43DB-9583-54CE6EB7DF58}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -35,15 +31,19 @@ Global
 		{EF341E35-1E22-41DD-AB1B-88B14A6AC62B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EF341E35-1E22-41DD-AB1B-88B14A6AC62B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EF341E35-1E22-41DD-AB1B-88B14A6AC62B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CDBF3EFC-758E-4B15-98C2-9F9BA884744C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CDBF3EFC-758E-4B15-98C2-9F9BA884744C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CDBF3EFC-758E-4B15-98C2-9F9BA884744C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CDBF3EFC-758E-4B15-98C2-9F9BA884744C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{64762178-6E0B-4843-8949-5C0F5C07EF3A} = {9853E5AB-C908-4BE7-939F-B4C85ACAAF9A}
-		{CDBF3EFC-758E-4B15-98C2-9F9BA884744C} = {9853E5AB-C908-4BE7-939F-B4C85ACAAF9A}
 		{9C863757-B6E6-43DB-9583-54CE6EB7DF58} = {9853E5AB-C908-4BE7-939F-B4C85ACAAF9A}
 		{EF341E35-1E22-41DD-AB1B-88B14A6AC62B} = {9853E5AB-C908-4BE7-939F-B4C85ACAAF9A}
+		{CDBF3EFC-758E-4B15-98C2-9F9BA884744C} = {9853E5AB-C908-4BE7-939F-B4C85ACAAF9A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0F9EF2B8-64AF-49CC-BCA8-7E8FD67B263A}
