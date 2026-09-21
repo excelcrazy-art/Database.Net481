@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Data;
+using System.Data.SQLite;
 using System.IO;
 using Database.Net481.Attributes;
 using Database.Net481.Database;
@@ -32,6 +34,7 @@ namespace Database.Net481.ConsoleTest
             try
             {
                 TestSchema(connectionString);
+                TestExecuteReader(connectionString);
 
                 Console.WriteLine();
                 Console.WriteLine("========================================");
@@ -105,6 +108,164 @@ namespace Database.Net481.ConsoleTest
             context.Dispose();
         }
 
+        private static void TestExecuteReader(string connectionString)
+        {
+            Console.WriteLine();
+            Console.WriteLine("[5] ExecuteReader 테스트");
+
+            SqliteConnectionFactory factory =
+                new SqliteConnectionFactory(connectionString);
+
+            SqliteDialect dialect =
+                new SqliteDialect();
+
+            DatabaseContext context =
+                new DatabaseContext(
+                    factory,
+                    dialect);
+
+            try
+            {
+                Console.WriteLine("    TestUser 테이블 생성");
+
+                context.ExecuteNonQuery(
+                    @"CREATE TABLE TestUser
+              (
+                  Id   INTEGER PRIMARY KEY AUTOINCREMENT,
+                  Name TEXT NOT NULL,
+                  Age  INTEGER NOT NULL
+              )");
+
+                Console.WriteLine("    OK");
+
+                Console.WriteLine();
+                Console.WriteLine("    테스트 데이터 입력");
+
+                context.ExecuteNonQuery(
+                    @"INSERT INTO TestUser (Name, Age)
+              VALUES ('홍길동', 30)");
+
+                context.ExecuteNonQuery(
+                    @"INSERT INTO TestUser (Name, Age)
+              VALUES ('김철수', 40)");
+
+                context.ExecuteNonQuery(
+                    @"INSERT INTO TestUser (Name, Age)
+              VALUES ('이영희', 50)");
+
+                Console.WriteLine("    OK");
+
+                Console.WriteLine();
+                Console.WriteLine("    전체 데이터 조회");
+
+                int count = 0;
+
+                using (System.Data.IDataReader reader =
+                    context.ExecuteReader(
+                        @"SELECT Id, Name, Age
+                  FROM TestUser
+                  ORDER BY Id"))
+                {
+                    while (reader.Read())
+                    {
+                        int id =
+                            Convert.ToInt32(reader["Id"]);
+
+                        string name =
+                            Convert.ToString(reader["Name"]);
+
+                        int age =
+                            Convert.ToInt32(reader["Age"]);
+
+                        Console.WriteLine(
+                            "        Id={0}, Name={1}, Age={2}",
+                            id,
+                            name,
+                            age);
+
+                        count++;
+                    }
+                }
+
+                if (count != 3)
+                {
+                    throw new Exception(
+                        "조회된 행 수가 예상과 다릅니다. " +
+                        "예상: 3, 실제: " + count);
+                }
+
+                Console.WriteLine(
+                    "    OK - 조회된 행 수 : " + count);
+
+                Console.WriteLine();
+                Console.WriteLine("    Parameter 조회");
+
+                IDbDataParameter parameter =
+                    new SQLiteParameter("@Age",40);
+
+                using (System.Data.IDataReader reader =
+                    context.ExecuteReader(
+                        @"SELECT Id, Name, Age
+                  FROM TestUser
+                  WHERE Age >= @Age
+                  ORDER BY Id",
+                        new System.Data.IDbDataParameter[]
+                        {
+                    parameter
+                        }))
+                {
+                    count = 0;
+
+                    while (reader.Read())
+                    {
+                        int id =
+                            Convert.ToInt32(reader["Id"]);
+
+                        string name =
+                            Convert.ToString(reader["Name"]);
+
+                        int age =
+                            Convert.ToInt32(reader["Age"]);
+
+                        Console.WriteLine(
+                            "        Id={0}, Name={1}, Age={2}",
+                            id,
+                            name,
+                            age);
+
+                        count++;
+                    }
+                }
+
+                if (count != 2)
+                {
+                    throw new Exception(
+                        "Parameter 조회 결과가 예상과 다릅니다. " +
+                        "예상: 2, 실제: " + count);
+                }
+
+                Console.WriteLine(
+                    "    OK - Parameter 조회 결과 : " + count);
+
+                Console.WriteLine();
+                Console.WriteLine("    TestUser 테이블 삭제");
+
+                int droppedCount =
+                    context.ExecuteNonQuery(
+                        "DROP TABLE TestUser");
+
+                Console.WriteLine(
+                    "    OK - 영향받은 객체 수 : " + droppedCount);
+
+                Console.WriteLine();
+                Console.WriteLine("    ExecuteReader 테스트 PASS");
+            }
+            finally
+            {
+                context.Dispose();
+            }
+        }
+
         [Table("TestUser")]
         [Index("IX_TestUser_Name", "Name")]
         private sealed class TestUser
@@ -122,5 +283,7 @@ namespace Database.Net481.ConsoleTest
             [Column("Age")]
             public int Age { get; set; }
         }
+
+
     }
 }

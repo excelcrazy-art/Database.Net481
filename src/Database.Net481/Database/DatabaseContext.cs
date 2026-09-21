@@ -230,6 +230,106 @@ namespace Database.Net481.Database
         }
 
         /// <summary>
+        /// SQL 명령을 실행하고 결과를 IDataReader로 반환합니다.
+        /// </summary>
+        /// <param name="sql">
+        /// 실행할 SQL 문입니다.
+        /// </param>
+        /// <param name="parameters">
+        /// SQL Parameter 목록입니다.
+        /// </param>
+        /// <param name="transaction">
+        /// 사용할 DatabaseTransaction입니다.
+        /// 지정하지 않으면 새 연결을 사용합니다.
+        /// </param>
+        /// <returns>
+        /// SQL 실행 결과를 읽을 수 있는 IDataReader입니다.
+        /// </returns>
+        public IDataReader ExecuteReader(
+            string sql,
+            IEnumerable<IDbDataParameter> parameters = null,
+            DatabaseTransaction transaction = null)
+        {
+            ThrowIfDisposed();
+
+            if (string.IsNullOrWhiteSpace(sql))
+            {
+                throw new ArgumentException(
+                    "SQL 문은 비어 있을 수 없습니다.",
+                    nameof(sql));
+            }
+
+            if (transaction != null)
+            {
+                return ExecuteReader(
+                    transaction.Connection,
+                    transaction.Transaction,
+                    sql,
+                    parameters);
+            }
+
+            IDbConnection connection = OpenConnection();
+
+            try
+            {
+                return ExecuteReader(
+                    connection,
+                    null,
+                    sql,
+                    parameters);
+            }
+            catch
+            {
+                connection.Dispose();
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// 지정된 연결과 Transaction을 사용하여 SQL 명령을 실행하고
+        /// IDataReader를 반환합니다.
+        /// </summary>
+        private IDataReader ExecuteReader(
+            IDbConnection connection,
+            IDbTransaction transaction,
+            string sql,
+            IEnumerable<IDbDataParameter> parameters)
+        {
+            IDbCommand command = connection.CreateCommand();
+
+            try
+            {
+                command.CommandText = sql;
+
+                if (transaction != null)
+                {
+                    command.Transaction = transaction;
+                }
+
+                AddParameters(command, parameters);
+
+                if (transaction != null)
+                {
+                    return command.ExecuteReader();
+                }
+
+                return command.ExecuteReader(
+                    CommandBehavior.CloseConnection);
+            }
+            catch
+            {
+                command.Dispose();
+
+                if (transaction == null)
+                {
+                    connection.Dispose();
+                }
+
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Command에 Parameter를 추가합니다.
         /// </summary>
         private static void AddParameters(
