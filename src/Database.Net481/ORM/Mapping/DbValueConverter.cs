@@ -97,10 +97,23 @@ namespace Database.Net481.ORM.Mapping
                     Enum.GetUnderlyingType(valueType),
                     CultureInfo.InvariantCulture);
 
-            // Guid는 문자열로 변환하지 않습니다.
-            // 각 DB Provider가 Guid를 지원할 수 있도록 Guid 자체를 전달합니다.
+
+            // Guid는 DB에 표준 문자열 형식으로 저장합니다.
+            // "D" 형식:
+            // xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+            //
+            // Provider마다 Guid를 자체적으로 처리하는 방식이 다르므로
+            // ORM에서는 일관된 문자열 표현을 사용합니다.
             if (valueType == typeof(Guid))
-                return value;
+            {
+                return ((Guid)value).ToString("D");
+            }
+
+            // char는 DB에 한 글자의 문자열로 저장합니다. 
+            if (valueType == typeof(char))
+            {
+                return value.ToString();
+            }
 
             // DateTime, DateTimeOffset, Boolean 등은
             // Provider가 적절한 DB 타입으로 처리하도록 그대로 전달합니다.

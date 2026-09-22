@@ -49,6 +49,7 @@
     <Compile Include="Database\DatabaseContext.cs" />
     <Compile Include="Database\DatabaseTransaction.cs" />
     <Compile Include="Database\Interfaces\IDbConnectionFactory.cs" />
+    <Compile Include="Database\Interfaces\IDbParameterFactory.cs" />
     <Compile Include="ORM\Cache\EntityMetadataCache.cs" />
     <Compile Include="ORM\Mapping\DataReaderMapper.cs" />
     <Compile Include="ORM\Mapping\DbValueConverter.cs" />
