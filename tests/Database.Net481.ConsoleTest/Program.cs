@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using Database.Net481.Attributes;
+using Database.Net481.Core;
 using Database.Net481.Database;
 using Database.Net481.ORM.Cache;
 using Database.Net481.ORM.Metadata;
@@ -50,7 +51,13 @@ namespace Database.Net481.ConsoleTest
 
                 TestGenericRepositoryConditions(connectionString);
 
+                TestParameterFactory(connectionString);
 
+                TestDatabaseOptions();
+
+                TestDatabaseContextDispose(connectionString);
+
+                TestDatabaseContextSqlExceptions(connectionString);
 
                 Console.WriteLine();
                 Console.WriteLine("========================================");
@@ -3187,6 +3194,1057 @@ namespace Database.Net481.ConsoleTest
             }
         }
 
+
+ 
+        private static void TestParameterFactory(
+            string connectionString)
+        {
+            Console.WriteLine();
+            Console.WriteLine("[13] IDbParameterFactory 테스트");
+
+            SqliteConnectionFactory connectionFactory =
+                new SqliteConnectionFactory(connectionString);
+
+            SqliteParameterFactory parameterFactory =
+                new SqliteParameterFactory();
+
+            SqliteDialect dialect =
+                new SqliteDialect();
+
+            DatabaseContext context =
+                new DatabaseContext(
+                    connectionFactory,
+                    parameterFactory,
+                    dialect);
+
+            try
+            {
+                // ---------------------------------------------------------
+                // 테스트 테이블 준비
+                // ---------------------------------------------------------
+
+                Console.WriteLine();
+                Console.WriteLine(
+                    "    ParameterFactoryTest 테이블 생성");
+
+                context.ExecuteNonQuery(
+                    "DROP TABLE IF EXISTS ParameterFactoryTest");
+
+                context.ExecuteNonQuery(
+                    "CREATE TABLE ParameterFactoryTest (" +
+                    "id INTEGER PRIMARY KEY, " +
+                    "name TEXT, " +
+                    "age INTEGER)");
+
+                Console.WriteLine("    OK");
+
+                // ---------------------------------------------------------
+                // [13-1] CreateParameter 기본 테스트
+                // ---------------------------------------------------------
+
+                Console.WriteLine();
+                Console.WriteLine(
+                    "    [13-1] CreateParameter 기본 테스트");
+
+                IDbDataParameter idParameter =
+                    context.CreateParameter(
+                        "@id",
+                        1);
+
+                IDbDataParameter nameParameter =
+                    context.CreateParameter(
+                        "@name",
+                        "홍길동");
+
+                IDbDataParameter ageParameter =
+                    context.CreateParameter(
+                        "@age",
+                        30);
+
+                if (idParameter == null)
+                    throw new Exception(
+                        "idParameter가 null입니다.");
+
+                if (nameParameter == null)
+                    throw new Exception(
+                        "nameParameter가 null입니다.");
+
+                if (ageParameter == null)
+                    throw new Exception(
+                        "ageParameter가 null입니다.");
+
+                Console.WriteLine(
+                    "        Parameter Type : " +
+                    idParameter.GetType().FullName);
+
+                Console.WriteLine(
+                    "        id Name : " +
+                    idParameter.ParameterName);
+
+                Console.WriteLine(
+                    "        id Value : " +
+                    idParameter.Value);
+
+                Console.WriteLine(
+                    "        name Value : " +
+                    nameParameter.Value);
+
+                Console.WriteLine(
+                    "        age Value : " +
+                    ageParameter.Value);
+
+                Console.WriteLine("        OK");
+
+                // ---------------------------------------------------------
+                // [13-2] CreateParameter + ExecuteNonQuery
+                // ---------------------------------------------------------
+
+                Console.WriteLine();
+                Console.WriteLine(
+                    "    [13-2] CreateParameter + ExecuteNonQuery");
+
+                int affectedRows =
+                    context.ExecuteNonQuery(
+                        "INSERT INTO ParameterFactoryTest " +
+                        "(id, name, age) " +
+                        "VALUES (@id, @name, @age)",
+                        new IDbDataParameter[]
+                        {
+                    idParameter,
+                    nameParameter,
+                    ageParameter
+                        });
+
+                Console.WriteLine(
+                    "        Insert affected rows : " +
+                    affectedRows);
+
+                if (affectedRows != 1)
+                {
+                    throw new Exception(
+                        "INSERT 결과가 예상과 다릅니다. " +
+                        "예상: 1, 실제: " +
+                        affectedRows);
+                }
+
+                Console.WriteLine("        OK");
+
+                // ---------------------------------------------------------
+                // [13-3] CreateParameter + ExecuteScalar
+                // ---------------------------------------------------------
+
+                Console.WriteLine();
+                Console.WriteLine(
+                    "    [13-3] CreateParameter + ExecuteScalar");
+
+                IDbDataParameter scalarIdParameter =
+                    context.CreateParameter(
+                        "@id",
+                        1);
+
+                object scalarResult =
+                    context.ExecuteScalar(
+                        "SELECT age " +
+                        "FROM ParameterFactoryTest " +
+                        "WHERE id = @id",
+                        new IDbDataParameter[]
+                        {
+                    scalarIdParameter
+                        });
+
+                Console.WriteLine(
+                    "        Scalar 결과 : " +
+                    scalarResult);
+
+                int scalarAge =
+                    Convert.ToInt32(scalarResult);
+
+                if (scalarAge != 30)
+                {
+                    throw new Exception(
+                        "Scalar 결과가 예상과 다릅니다. " +
+                        "예상: 30, 실제: " +
+                        scalarAge);
+                }
+
+                Console.WriteLine("        OK");
+
+                // ---------------------------------------------------------
+                // [13-4] CreateParameter + ExecuteReader
+                // ---------------------------------------------------------
+
+                Console.WriteLine();
+                Console.WriteLine(
+                    "    [13-4] CreateParameter + ExecuteReader");
+
+                IDbDataParameter readerIdParameter =
+                    context.CreateParameter(
+                        "@id",
+                        1);
+
+                int readerCount = 0;
+
+                using (IDataReader reader =
+                       context.ExecuteReader(
+                           "SELECT id, name, age " +
+                           "FROM ParameterFactoryTest " +
+                           "WHERE id = @id",
+                           new IDbDataParameter[]
+                           {
+                       readerIdParameter
+                           }))
+                {
+                    while (reader.Read())
+                    {
+                        readerCount++;
+
+                        int id =
+                            Convert.ToInt32(
+                                reader["id"]);
+
+                        string name =
+                            Convert.ToString(
+                                reader["name"]);
+
+                        int age =
+                            Convert.ToInt32(
+                                reader["age"]);
+
+                        Console.WriteLine(
+                            "        Id={0}, Name={1}, Age={2}",
+                            id,
+                            name,
+                            age);
+                    }
+                }
+
+                if (readerCount != 1)
+                {
+                    throw new Exception(
+                        "Reader 조회 결과가 예상과 다릅니다. " +
+                        "예상: 1, 실제: " +
+                        readerCount);
+                }
+
+                Console.WriteLine("        OK");
+
+                // ---------------------------------------------------------
+                // [13-5] null 값 테스트
+                // ---------------------------------------------------------
+
+                Console.WriteLine();
+                Console.WriteLine(
+                    "    [13-5] null 값 테스트");
+
+                IDbDataParameter nullParameter =
+                    context.CreateParameter(
+                        "@value",
+                        null);
+
+                Console.WriteLine(
+                    "        Parameter Value Type : " +
+                    nullParameter.Value.GetType().FullName);
+
+                Console.WriteLine(
+                    "        Parameter Value : " +
+                    nullParameter.Value);
+
+                if (nullParameter.Value != DBNull.Value)
+                {
+                    throw new Exception(
+                        "null 값이 DBNull.Value로 변환되지 않았습니다.");
+                }
+
+                Console.WriteLine("        OK");
+
+                // ---------------------------------------------------------
+                // [13-6] 잘못된 Parameter 이름 예외 테스트
+                // ---------------------------------------------------------
+
+                Console.WriteLine();
+                Console.WriteLine(
+                    "    [13-6] 잘못된 Parameter 이름 예외 테스트");
+
+                bool exceptionThrown = false;
+
+                try
+                {
+                    context.CreateParameter(
+                        "",
+                        100);
+                }
+                catch (ArgumentException ex)
+                {
+                    exceptionThrown = true;
+
+                    Console.WriteLine(
+                        "        예상된 예외 : " +
+                        ex.GetType().Name);
+
+                    Console.WriteLine(
+                        "        메시지 : " +
+                        ex.Message);
+                }
+
+                if (!exceptionThrown)
+                {
+                    throw new Exception(
+                        "빈 Parameter 이름에 대한 " +
+                        "예외가 발생하지 않았습니다.");
+                }
+
+                Console.WriteLine("        OK");
+
+                // ---------------------------------------------------------
+                // 테이블 삭제
+                // ---------------------------------------------------------
+
+                Console.WriteLine();
+                Console.WriteLine(
+                    "    ParameterFactoryTest 테이블 삭제");
+
+                int dropped =
+                    context.ExecuteNonQuery(
+                        "DROP TABLE ParameterFactoryTest");
+
+                Console.WriteLine(
+                    "    OK - 영향받은 객체 수 : " +
+                    dropped);
+
+                Console.WriteLine();
+                Console.WriteLine(
+                    "    IDbParameterFactory 테스트 PASS");
+            }
+            finally
+            {
+                context.Dispose();
+            }
+        }
+
+
+        
+        private static void TestDatabaseOptions()
+        {
+            Console.WriteLine();
+            Console.WriteLine("[14] DatabaseOptions 테스트");
+
+            Console.WriteLine();
+            Console.WriteLine(
+                "    [14-1] 정상적인 DatabaseOptions 테스트");
+
+            DatabaseOptions validOptions =
+                new DatabaseOptions();
+
+            validOptions.Provider =
+                DatabaseProvider.SQLite;
+
+            validOptions.ConnectionString =
+                "Data Source=test.db;";
+
+            validOptions.ConnectionTimeout = 30;
+
+            validOptions.Validate();
+
+            Console.WriteLine(
+                "        Provider : " +
+                validOptions.Provider);
+
+            Console.WriteLine(
+                "        ConnectionTimeout : " +
+                validOptions.ConnectionTimeout);
+
+            Console.WriteLine("        Validate() : OK");
+
+            Console.WriteLine();
+            Console.WriteLine(
+                "    [14-2] ConnectionString 누락 예외 테스트");
+
+            DatabaseOptions emptyConnectionStringOptions =
+                new DatabaseOptions();
+
+            emptyConnectionStringOptions.Provider =
+                DatabaseProvider.SQLite;
+
+            emptyConnectionStringOptions.ConnectionTimeout = 30;
+
+            bool connectionStringExceptionThrown = false;
+
+            try
+            {
+                emptyConnectionStringOptions.Validate();
+            }
+            catch (InvalidOperationException ex)
+            {
+                connectionStringExceptionThrown = true;
+
+                Console.WriteLine(
+                    "        예상된 예외 : " +
+                    ex.GetType().Name);
+
+                Console.WriteLine(
+                    "        메시지 : " +
+                    ex.Message);
+            }
+
+            if (!connectionStringExceptionThrown)
+            {
+                throw new Exception(
+                    "ConnectionString 누락에 대한 " +
+                    "예외가 발생하지 않았습니다.");
+            }
+
+            Console.WriteLine("        OK");
+
+            Console.WriteLine();
+            Console.WriteLine(
+                "    [14-3] ConnectionTimeout 음수 예외 테스트");
+
+            DatabaseOptions negativeTimeoutOptions =
+                new DatabaseOptions();
+
+            negativeTimeoutOptions.Provider =
+                DatabaseProvider.SQLite;
+
+            negativeTimeoutOptions.ConnectionString =
+                "Data Source=test.db;";
+
+            negativeTimeoutOptions.ConnectionTimeout = -1;
+
+            bool timeoutExceptionThrown = false;
+
+            try
+            {
+                negativeTimeoutOptions.Validate();
+            }
+            catch (InvalidOperationException ex)
+            {
+                timeoutExceptionThrown = true;
+
+                Console.WriteLine(
+                    "        예상된 예외 : " +
+                    ex.GetType().Name);
+
+                Console.WriteLine(
+                    "        메시지 : " +
+                    ex.Message);
+            }
+
+            if (!timeoutExceptionThrown)
+            {
+                throw new Exception(
+                    "음수 ConnectionTimeout에 대한 " +
+                    "예외가 발생하지 않았습니다.");
+            }
+
+            Console.WriteLine("        OK");
+
+            Console.WriteLine();
+            Console.WriteLine(
+                "    DatabaseOptions 테스트 PASS");
+        }
+
+
+
+        private static void TestDatabaseContextDispose(
+            string connectionString)
+        {
+            Console.WriteLine();
+            Console.WriteLine(
+                "[15] DatabaseContext Dispose 테스트");
+
+            Console.WriteLine();
+            Console.WriteLine(
+                "    [15-1] Dispose 후 CreateConnection() 테스트");
+
+            {
+                SqliteConnectionFactory connectionFactory =
+                    new SqliteConnectionFactory(connectionString);
+
+                SqliteParameterFactory parameterFactory =
+                    new SqliteParameterFactory();
+
+                SqliteDialect dialect =
+                    new SqliteDialect();
+
+                DatabaseContext context =
+                    new DatabaseContext(
+                        connectionFactory,
+                        parameterFactory,
+                        dialect);
+
+                context.Dispose();
+
+                bool exceptionThrown = false;
+
+                try
+                {
+                    context.CreateConnection();
+                }
+                catch (ObjectDisposedException ex)
+                {
+                    exceptionThrown = true;
+
+                    Console.WriteLine(
+                        "        예상된 예외 : " +
+                        ex.GetType().Name);
+
+                    Console.WriteLine(
+                        "        메시지 : " +
+                        ex.Message);
+                }
+
+                if (!exceptionThrown)
+                {
+                    throw new Exception(
+                        "Dispose 후 CreateConnection()에서 " +
+                        "ObjectDisposedException이 발생하지 않았습니다.");
+                }
+
+                Console.WriteLine("        OK");
+            }
+
+            Console.WriteLine();
+            Console.WriteLine(
+                "    [15-2] Dispose 후 OpenConnection() 테스트");
+
+            {
+                SqliteConnectionFactory connectionFactory =
+                    new SqliteConnectionFactory(connectionString);
+
+                SqliteParameterFactory parameterFactory =
+                    new SqliteParameterFactory();
+
+                SqliteDialect dialect =
+                    new SqliteDialect();
+
+                DatabaseContext context =
+                    new DatabaseContext(
+                        connectionFactory,
+                        parameterFactory,
+                        dialect);
+
+                context.Dispose();
+
+                bool exceptionThrown = false;
+
+                try
+                {
+                    context.OpenConnection();
+                }
+                catch (ObjectDisposedException ex)
+                {
+                    exceptionThrown = true;
+
+                    Console.WriteLine(
+                        "        예상된 예외 : " +
+                        ex.GetType().Name);
+
+                    Console.WriteLine(
+                        "        메시지 : " +
+                        ex.Message);
+                }
+
+                if (!exceptionThrown)
+                {
+                    throw new Exception(
+                        "Dispose 후 OpenConnection()에서 " +
+                        "ObjectDisposedException이 발생하지 않았습니다.");
+                }
+
+                Console.WriteLine("        OK");
+            }
+
+            Console.WriteLine();
+            Console.WriteLine(
+                "    [15-3] Dispose 후 CreateParameter() 테스트");
+
+            {
+                SqliteConnectionFactory connectionFactory =
+                    new SqliteConnectionFactory(connectionString);
+
+                SqliteParameterFactory parameterFactory =
+                    new SqliteParameterFactory();
+
+                SqliteDialect dialect =
+                    new SqliteDialect();
+
+                DatabaseContext context =
+                    new DatabaseContext(
+                        connectionFactory,
+                        parameterFactory,
+                        dialect);
+
+                context.Dispose();
+
+                bool exceptionThrown = false;
+
+                try
+                {
+                    context.CreateParameter(
+                        "@id",
+                        1);
+                }
+                catch (ObjectDisposedException ex)
+                {
+                    exceptionThrown = true;
+
+                    Console.WriteLine(
+                        "        예상된 예외 : " +
+                        ex.GetType().Name);
+
+                    Console.WriteLine(
+                        "        메시지 : " +
+                        ex.Message);
+                }
+
+                if (!exceptionThrown)
+                {
+                    throw new Exception(
+                        "Dispose 후 CreateParameter()에서 " +
+                        "ObjectDisposedException이 발생하지 않았습니다.");
+                }
+
+                Console.WriteLine("        OK");
+            }
+
+            Console.WriteLine();
+            Console.WriteLine(
+                "    [15-4] Dispose 후 ExecuteNonQuery() 테스트");
+
+            {
+                SqliteConnectionFactory connectionFactory =
+                    new SqliteConnectionFactory(connectionString);
+
+                SqliteParameterFactory parameterFactory =
+                    new SqliteParameterFactory();
+
+                SqliteDialect dialect =
+                    new SqliteDialect();
+
+                DatabaseContext context =
+                    new DatabaseContext(
+                        connectionFactory,
+                        parameterFactory,
+                        dialect);
+
+                context.Dispose();
+
+                bool exceptionThrown = false;
+
+                try
+                {
+                    context.ExecuteNonQuery(
+                        "SELECT 1");
+                }
+                catch (ObjectDisposedException ex)
+                {
+                    exceptionThrown = true;
+
+                    Console.WriteLine(
+                        "        예상된 예외 : " +
+                        ex.GetType().Name);
+
+                    Console.WriteLine(
+                        "        메시지 : " +
+                        ex.Message);
+                }
+
+                if (!exceptionThrown)
+                {
+                    throw new Exception(
+                        "Dispose 후 ExecuteNonQuery()에서 " +
+                        "ObjectDisposedException이 발생하지 않았습니다.");
+                }
+
+                Console.WriteLine("        OK");
+            }
+
+            Console.WriteLine();
+            Console.WriteLine(
+                "    [15-5] Dispose 후 ExecuteScalar() 테스트");
+
+            {
+                SqliteConnectionFactory connectionFactory =
+                    new SqliteConnectionFactory(connectionString);
+
+                SqliteParameterFactory parameterFactory =
+                    new SqliteParameterFactory();
+
+                SqliteDialect dialect =
+                    new SqliteDialect();
+
+                DatabaseContext context =
+                    new DatabaseContext(
+                        connectionFactory,
+                        parameterFactory,
+                        dialect);
+
+                context.Dispose();
+
+                bool exceptionThrown = false;
+
+                try
+                {
+                    context.ExecuteScalar(
+                        "SELECT 1");
+                }
+                catch (ObjectDisposedException ex)
+                {
+                    exceptionThrown = true;
+
+                    Console.WriteLine(
+                        "        예상된 예외 : " +
+                        ex.GetType().Name);
+
+                    Console.WriteLine(
+                        "        메시지 : " +
+                        ex.Message);
+                }
+
+                if (!exceptionThrown)
+                {
+                    throw new Exception(
+                        "Dispose 후 ExecuteScalar()에서 " +
+                        "ObjectDisposedException이 발생하지 않았습니다.");
+                }
+
+                Console.WriteLine("        OK");
+            }
+
+            Console.WriteLine();
+            Console.WriteLine(
+                "    [15-6] Dispose 후 ExecuteReader() 테스트");
+
+            {
+                SqliteConnectionFactory connectionFactory =
+                    new SqliteConnectionFactory(connectionString);
+
+                SqliteParameterFactory parameterFactory =
+                    new SqliteParameterFactory();
+
+                SqliteDialect dialect =
+                    new SqliteDialect();
+
+                DatabaseContext context =
+                    new DatabaseContext(
+                        connectionFactory,
+                        parameterFactory,
+                        dialect);
+
+                context.Dispose();
+
+                bool exceptionThrown = false;
+
+                try
+                {
+                    context.ExecuteReader(
+                        "SELECT 1");
+                }
+                catch (ObjectDisposedException ex)
+                {
+                    exceptionThrown = true;
+
+                    Console.WriteLine(
+                        "        예상된 예외 : " +
+                        ex.GetType().Name);
+
+                    Console.WriteLine(
+                        "        메시지 : " +
+                        ex.Message);
+                }
+
+                if (!exceptionThrown)
+                {
+                    throw new Exception(
+                        "Dispose 후 ExecuteReader()에서 " +
+                        "ObjectDisposedException이 발생하지 않았습니다.");
+                }
+
+                Console.WriteLine("        OK");
+            }
+
+            Console.WriteLine();
+            Console.WriteLine(
+                "    [15-7] Dispose 두 번 호출 테스트");
+
+            {
+                SqliteConnectionFactory connectionFactory =
+                    new SqliteConnectionFactory(connectionString);
+
+                SqliteParameterFactory parameterFactory =
+                    new SqliteParameterFactory();
+
+                SqliteDialect dialect =
+                    new SqliteDialect();
+
+                DatabaseContext context =
+                    new DatabaseContext(
+                        connectionFactory,
+                        parameterFactory,
+                        dialect);
+
+                context.Dispose();
+                context.Dispose();
+
+                Console.WriteLine(
+                    "        Dispose() 두 번째 호출 : 정상");
+
+                Console.WriteLine("        OK");
+            }
+
+            Console.WriteLine();
+            Console.WriteLine(
+                "    DatabaseContext Dispose 테스트 PASS");
+        }
+
+
+       
+        private static void TestDatabaseContextSqlExceptions(
+            string connectionString)
+        {
+            Console.WriteLine();
+            Console.WriteLine(
+                "[16] DatabaseContext SQL 예외 테스트");
+
+            SqliteConnectionFactory connectionFactory =
+                new SqliteConnectionFactory(connectionString);
+
+            SqliteParameterFactory parameterFactory =
+                new SqliteParameterFactory();
+
+            SqliteDialect dialect =
+                new SqliteDialect();
+
+            DatabaseContext context =
+                new DatabaseContext(
+                    connectionFactory,
+                    parameterFactory,
+                    dialect);
+
+            try
+            {
+                Console.WriteLine();
+                Console.WriteLine(
+                    "    [16-1] 빈 SQL 예외 테스트");
+
+                bool exceptionThrown = false;
+
+                try
+                {
+                    context.ExecuteNonQuery("");
+                }
+                catch (ArgumentException ex)
+                {
+                    exceptionThrown = true;
+
+                    Console.WriteLine(
+                        "        예상된 예외 : " +
+                        ex.GetType().Name);
+
+                    Console.WriteLine(
+                        "        메시지 : " +
+                        ex.Message);
+                }
+
+                if (!exceptionThrown)
+                {
+                    throw new Exception(
+                        "빈 SQL에 대한 " +
+                        "ArgumentException이 발생하지 않았습니다.");
+                }
+
+                Console.WriteLine("        OK");
+
+                Console.WriteLine();
+                Console.WriteLine(
+                    "    [16-2] 잘못된 SQL 예외 테스트");
+
+                exceptionThrown = false;
+
+                try
+                {
+                    context.ExecuteNonQuery(
+                        "INVALID SQL");
+                }
+                catch (Exception ex)
+                {
+                    exceptionThrown = true;
+
+                    Console.WriteLine(
+                        "        예상된 예외 : " +
+                        ex.GetType().FullName);
+
+                    Console.WriteLine(
+                        "        메시지 : " +
+                        ex.Message);
+                }
+
+                if (!exceptionThrown)
+                {
+                    throw new Exception(
+                        "잘못된 SQL에 대한 " +
+                        "예외가 발생하지 않았습니다.");
+                }
+
+                Console.WriteLine("        OK");
+
+                Console.WriteLine();
+                Console.WriteLine(
+                    "    [16-3] 존재하지 않는 테이블 예외 테스트");
+
+                exceptionThrown = false;
+
+                try
+                {
+                    context.ExecuteScalar(
+                        "SELECT COUNT(*) " +
+                        "FROM TableThatDoesNotExist");
+                }
+                catch (Exception ex)
+                {
+                    exceptionThrown = true;
+
+                    Console.WriteLine(
+                        "        예상된 예외 : " +
+                        ex.GetType().FullName);
+
+                    Console.WriteLine(
+                        "        메시지 : " +
+                        ex.Message);
+                }
+
+                if (!exceptionThrown)
+                {
+                    throw new Exception(
+                        "존재하지 않는 테이블에 대한 " +
+                        "예외가 발생하지 않았습니다.");
+                }
+
+                Console.WriteLine("        OK");
+
+                Console.WriteLine();
+                Console.WriteLine(
+                    "    [16-4] Parameter 불일치 예외 테스트");
+
+                exceptionThrown = false;
+
+                try
+                {
+                    IDbDataParameter parameter =
+                        context.CreateParameter(
+                            "@id",
+                            1);
+
+                    context.ExecuteScalar(
+                        "SELECT @missing",
+                        new IDbDataParameter[]
+                        {
+                    parameter
+                        });
+                }
+                catch (Exception ex)
+                {
+                    exceptionThrown = true;
+
+                    Console.WriteLine(
+                        "        예상된 예외 : " +
+                        ex.GetType().FullName);
+
+                    Console.WriteLine(
+                        "        메시지 : " +
+                        ex.Message);
+                }
+
+                if (!exceptionThrown)
+                {
+                    throw new Exception(
+                        "Parameter 불일치에 대한 " +
+                        "예외가 발생하지 않았습니다.");
+                }
+
+                Console.WriteLine("        OK");
+
+                Console.WriteLine();
+                Console.WriteLine(
+                    "    [16-5] 중복 Primary Key 예외 테스트");
+
+                context.ExecuteNonQuery(
+                    "DROP TABLE IF EXISTS ExceptionTest");
+
+                context.ExecuteNonQuery(
+                    "CREATE TABLE ExceptionTest (" +
+                    "id INTEGER PRIMARY KEY, " +
+                    "name TEXT)");
+
+                context.ExecuteNonQuery(
+                    "INSERT INTO ExceptionTest " +
+                    "(id, name) " +
+                    "VALUES (1, '첫 번째')");
+
+                exceptionThrown = false;
+
+                try
+                {
+                    IDbDataParameter idParameter =
+                        context.CreateParameter(
+                            "@id",
+                            1);
+
+                    IDbDataParameter nameParameter =
+                        context.CreateParameter(
+                            "@name",
+                            "두 번째");
+
+                    context.ExecuteNonQuery(
+                        "INSERT INTO ExceptionTest " +
+                        "(id, name) " +
+                        "VALUES (@id, @name)",
+                        new IDbDataParameter[]
+                        {
+                    idParameter,
+                    nameParameter
+                        });
+                }
+                catch (Exception ex)
+                {
+                    exceptionThrown = true;
+
+                    Console.WriteLine(
+                        "        예상된 예외 : " +
+                        ex.GetType().FullName);
+
+                    Console.WriteLine(
+                        "        메시지 : " +
+                        ex.Message);
+                }
+
+                if (!exceptionThrown)
+                {
+                    throw new Exception(
+                        "중복 Primary Key에 대한 " +
+                        "예외가 발생하지 않았습니다.");
+                }
+
+                Console.WriteLine("        OK");
+
+                Console.WriteLine();
+                Console.WriteLine(
+                    "    ExceptionTest 테이블 삭제");
+
+                context.ExecuteNonQuery(
+                    "DROP TABLE ExceptionTest");
+
+                Console.WriteLine("        OK");
+
+                Console.WriteLine();
+                Console.WriteLine(
+                    "    DatabaseContext SQL 예외 테스트 PASS");
+            }
+            finally
+            {
+                context.Dispose();
+            }
+        }
 
 
 

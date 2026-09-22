@@ -7,7 +7,8 @@ using Database.Net481.SQL;
 namespace Database.Net481.Database
 {
     /// <summary>
-    /// 데이터베이스 연결 및 SQL Dialect를 관리하는 공통 데이터베이스 컨텍스트입니다.
+    /// 데이터베이스 연결, Parameter 및 SQL Dialect를 관리하는
+    /// 공통 데이터베이스 컨텍스트입니다.
     /// </summary>
     public sealed class DatabaseContext : IDisposable
     {
@@ -19,28 +20,60 @@ namespace Database.Net481.Database
         public IDbConnectionFactory ConnectionFactory { get; }
 
         /// <summary>
+        /// 데이터베이스 Parameter를 생성하는 Factory입니다.
+        /// </summary>
+        public IDbParameterFactory ParameterFactory { get; }
+
+        /// <summary>
         /// 현재 데이터베이스에서 사용할 SQL Dialect입니다.
         /// </summary>
         public ISqlDialect Dialect { get; }
+
+
+        public DatabaseContext(
+            IDbConnectionFactory connectionFactory,
+            ISqlDialect dialect)
+        {
+            if (connectionFactory == null)
+                throw new ArgumentNullException(nameof(connectionFactory));
+
+            if (dialect == null)
+                throw new ArgumentNullException(nameof(dialect));
+
+            ConnectionFactory = connectionFactory;
+            Dialect = dialect;
+            ParameterFactory = null;
+        }
+
 
         /// <summary>
         /// DatabaseContext를 생성합니다.
         /// </summary>
         public DatabaseContext(
             IDbConnectionFactory connectionFactory,
+            IDbParameterFactory parameterFactory,
             ISqlDialect dialect)
         {
             if (connectionFactory == null)
             {
-                throw new ArgumentNullException(nameof(connectionFactory));
+                throw new ArgumentNullException(
+                    nameof(connectionFactory));
+            }
+
+            if (parameterFactory == null)
+            {
+                throw new ArgumentNullException(
+                    nameof(parameterFactory));
             }
 
             if (dialect == null)
             {
-                throw new ArgumentNullException(nameof(dialect));
+                throw new ArgumentNullException(
+                    nameof(dialect));
             }
 
             ConnectionFactory = connectionFactory;
+            ParameterFactory = parameterFactory;
             Dialect = dialect;
         }
 
@@ -73,6 +106,43 @@ namespace Database.Net481.Database
                 connection.Dispose();
                 throw;
             }
+        }
+
+        /// <summary>
+        /// 데이터베이스 Parameter를 생성합니다.
+        /// </summary>
+        /// <param name="name">
+        /// Parameter 이름입니다.
+        /// </param>
+        /// <param name="value">
+        /// Parameter 값입니다.
+        /// null인 경우 DBNull.Value로 처리됩니다.
+        /// </param>
+        /// <returns>
+        /// 생성된 데이터베이스 Parameter입니다.
+        /// </returns>
+        public IDbDataParameter CreateParameter(
+            string name,
+            object value)
+        {
+            ThrowIfDisposed();
+
+            if (ParameterFactory == null)
+            {
+                throw new InvalidOperationException(
+                    "IDbParameterFactory가 설정되지 않았습니다.");
+            }
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentException(
+                    "Parameter 이름은 비어 있을 수 없습니다.",
+                    nameof(name));
+            }
+
+            return ParameterFactory.CreateParameter(
+                name,
+                value);
         }
 
         /// <summary>
@@ -149,7 +219,9 @@ namespace Database.Net481.Database
                     command.Transaction = transaction;
                 }
 
-                AddParameters(command, parameters);
+                AddParameters(
+                    command,
+                    parameters);
 
                 return command.ExecuteNonQuery();
             }
@@ -206,7 +278,8 @@ namespace Database.Net481.Database
         }
 
         /// <summary>
-        /// 지정된 연결과 Transaction을 사용하여 Scalar SQL 명령을 실행합니다.
+        /// 지정된 연결과 Transaction을 사용하여
+        /// Scalar SQL 명령을 실행합니다.
         /// </summary>
         private object ExecuteScalar(
             IDbConnection connection,
@@ -223,7 +296,9 @@ namespace Database.Net481.Database
                     command.Transaction = transaction;
                 }
 
-                AddParameters(command, parameters);
+                AddParameters(
+                    command,
+                    parameters);
 
                 return command.ExecuteScalar();
             }
@@ -286,8 +361,8 @@ namespace Database.Net481.Database
         }
 
         /// <summary>
-        /// 지정된 연결과 Transaction을 사용하여 SQL 명령을 실행하고
-        /// IDataReader를 반환합니다.
+        /// 지정된 연결과 Transaction을 사용하여
+        /// SQL 명령을 실행하고 IDataReader를 반환합니다.
         /// </summary>
         private IDataReader ExecuteReader(
             IDbConnection connection,
@@ -306,7 +381,9 @@ namespace Database.Net481.Database
                     command.Transaction = transaction;
                 }
 
-                AddParameters(command, parameters);
+                AddParameters(
+                    command,
+                    parameters);
 
                 if (transaction != null)
                 {
