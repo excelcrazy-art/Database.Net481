@@ -242,6 +242,49 @@ namespace Database.Net481.Repositories
         }
 
         /// <summary>
+        /// Entity를 지정된 Transaction 내에서 데이터베이스에 추가합니다.
+        /// </summary>
+        /// <param name="entity">
+        /// 추가할 Entity입니다.
+        /// </param>
+        /// <param name="transaction">
+        /// 사용할 DatabaseTransaction입니다.
+        /// </param>
+        /// <returns>
+        /// 영향을 받은 행 수입니다.
+        /// </returns>
+        public int Insert(
+            T entity,
+            DatabaseTransaction transaction)
+        {
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
+
+            if (transaction == null)
+                throw new ArgumentNullException(nameof(transaction));
+
+            string sql =
+                InsertSqlBuilder.Build(
+                    _metadata,
+                    _context.Dialect);
+
+            using (IDbCommand command =
+                   transaction.Connection.CreateCommand())
+            {
+                command.CommandText = sql;
+                command.Transaction = transaction.Transaction;
+
+                ParameterMapper.AddInsertParameters(
+                    command,
+                    entity,
+                    _metadata);
+
+                return command.ExecuteNonQuery();
+            }
+        }
+
+
+        /// <summary>
         /// Primary Key를 기준으로 Entity를 조회합니다.
         /// 단일 Primary Key와 복합 Primary Key를 모두 지원합니다.
         /// </summary>
@@ -355,6 +398,53 @@ namespace Database.Net481.Repositories
         }
 
         /// <summary>
+        /// Entity를 지정된 Transaction 내에서 데이터베이스에 수정합니다.
+        /// </summary>
+        /// <param name="entity">
+        /// 수정할 Entity입니다.
+        /// </param>
+        /// <param name="transaction">
+        /// 사용할 DatabaseTransaction입니다.
+        /// </param>
+        /// <returns>
+        /// 영향을 받은 행 수입니다.
+        /// </returns>
+        public int Update(
+            T entity,
+            DatabaseTransaction transaction)
+        {
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
+
+            if (transaction == null)
+                throw new ArgumentNullException(nameof(transaction));
+
+            string sql =
+                UpdateSqlBuilder.Build(
+                    _metadata,
+                    _context.Dialect);
+
+            using (IDbCommand command =
+                   transaction.Connection.CreateCommand())
+            {
+                command.CommandText = sql;
+                command.Transaction = transaction.Transaction;
+
+                ParameterMapper.AddUpdateParameters(
+                    command,
+                    entity,
+                    _metadata);
+
+                ParameterMapper.AddPrimaryKeyParameters(
+                    command,
+                    entity,
+                    _metadata);
+
+                return command.ExecuteNonQuery();
+            }
+        }
+
+        /// <summary>
         /// Entity를 삭제합니다.
         /// Primary Key를 기준으로 삭제 대상 행을 결정합니다.
         /// </summary>
@@ -393,6 +483,48 @@ namespace Database.Net481.Repositories
         }
 
         /// <summary>
+        /// Entity를 지정된 Transaction 내에서 데이터베이스에서 삭제합니다.
+        /// </summary>
+        /// <param name="entity">
+        /// 삭제할 Entity입니다.
+        /// </param>
+        /// <param name="transaction">
+        /// 사용할 DatabaseTransaction입니다.
+        /// </param>
+        /// <returns>
+        /// 영향을 받은 행 수입니다.
+        /// </returns>
+        public int Delete(
+            T entity,
+            DatabaseTransaction transaction)
+        {
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
+
+            if (transaction == null)
+                throw new ArgumentNullException(nameof(transaction));
+
+            string sql =
+                DeleteSqlBuilder.Build(
+                    _metadata,
+                    _context.Dialect);
+
+            using (IDbCommand command =
+                   transaction.Connection.CreateCommand())
+            {
+                command.CommandText = sql;
+                command.Transaction = transaction.Transaction;
+
+                ParameterMapper.AddPrimaryKeyParameters(
+                    command,
+                    entity,
+                    _metadata);
+
+                return command.ExecuteNonQuery();
+            }
+        }
+
+        /// <summary>
         /// Entity를 추가하거나 수정합니다.
         /// Primary Key가 존재하면 수정하고, 존재하지 않으면 추가합니다.
         /// </summary>
@@ -427,6 +559,48 @@ namespace Database.Net481.Repositories
 
                     return command.ExecuteNonQuery();
                 }
+            }
+        }
+
+        /// <summary>
+        /// Entity를 지정된 Transaction 내에서 데이터베이스에 추가하거나 수정합니다.
+        /// </summary>
+        /// <param name="entity">
+        /// 추가하거나 수정할 Entity입니다.
+        /// </param>
+        /// <param name="transaction">
+        /// 사용할 DatabaseTransaction입니다.
+        /// </param>
+        /// <returns>
+        /// 영향을 받은 행 수입니다.
+        /// </returns>
+        public int Upsert(
+            T entity,
+            DatabaseTransaction transaction)
+        {
+            if (entity == null)
+                throw new ArgumentNullException(nameof(entity));
+
+            if (transaction == null)
+                throw new ArgumentNullException(nameof(transaction));
+
+            string sql =
+                UpsertSqlBuilder.Build(
+                    _metadata,
+                    _context.Dialect);
+
+            using (IDbCommand command =
+                   transaction.Connection.CreateCommand())
+            {
+                command.CommandText = sql;
+                command.Transaction = transaction.Transaction;
+
+                ParameterMapper.AddInsertParameters(
+                    command,
+                    entity,
+                    _metadata);
+
+                return command.ExecuteNonQuery();
             }
         }
 

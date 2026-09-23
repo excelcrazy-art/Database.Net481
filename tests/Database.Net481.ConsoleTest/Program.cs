@@ -13,6 +13,7 @@ using Database.Net481.Schema.Dialects;
 using Database.Net481.SQL.Builders;
 using Database.Net481.SQL.Dialects;
 using Database.Net481.Sqlite.Database;
+using Database.Net481.ConsoleTest.Models;
 
 namespace Database.Net481.ConsoleTest
 {
@@ -58,6 +59,13 @@ namespace Database.Net481.ConsoleTest
                 TestDatabaseContextDispose(connectionString);
 
                 TestDatabaseContextSqlExceptions(connectionString);
+
+                TestIndexes(connectionString);
+
+                TestIndexExceptions();
+
+                TestInsertTransaction(connectionString);
+
 
                 Console.WriteLine();
                 Console.WriteLine("========================================");
@@ -4246,8 +4254,605 @@ namespace Database.Net481.ConsoleTest
             }
         }
 
+        private static void TestIndexes(
+    string connectionString)
+        {
+            Console.WriteLine();
+            Console.WriteLine("[17] Index Metadata / Schema 테스트");
+
+            SqliteConnectionFactory factory =
+                new SqliteConnectionFactory(connectionString);
+
+            SqliteDialect dialect =
+                new SqliteDialect();
+
+            DatabaseContext context =
+                new DatabaseContext(
+                    factory,
+                    dialect);
+
+            try
+            {
+                SqliteSchemaDialect schemaDialect =
+                    new SqliteSchemaDialect();
+
+                SchemaGenerator schemaGenerator =
+                    new SchemaGenerator(
+                        context,
+                        schemaDialect);
+
+                // ------------------------------------------------------------
+                // [17-1] Metadata 확인
+                // ------------------------------------------------------------
+
+                Console.WriteLine();
+                Console.WriteLine("    [17-1] Index Metadata 확인");
+
+                EntityMetadata metadata =
+                    EntityMetadataCache.GetMetadata<IndexTestEntity>();
+
+                if (metadata == null)
+                {
+                    throw new Exception(
+                        "EntityMetadata가 null입니다.");
+                }
+
+                if (metadata.Indexes == null)
+                {
+                    throw new Exception(
+                        "EntityMetadata.Indexes가 null입니다.");
+                }
+
+                Console.WriteLine(
+                    "        Index 수 : " +
+                    metadata.Indexes.Count);
+
+                if (metadata.Indexes.Count != 2)
+                {
+                    throw new Exception(
+                        "Index 개수가 예상과 다릅니다. " +
+                        "예상: 2, 실제: " +
+                        metadata.Indexes.Count);
+                }
+
+                IndexMetadata nameIndex =
+                    metadata.Indexes[0];
+
+                IndexMetadata emailIndex =
+                    metadata.Indexes[1];
+
+                if (nameIndex.IndexName !=
+                    "IX_IndexTest_Name")
+                {
+                    throw new Exception(
+                        "Name Index 이름이 예상과 다릅니다.");
+                }
+
+                if (nameIndex.ColumnNames == null ||
+                    nameIndex.ColumnNames.Length != 1 ||
+                    nameIndex.ColumnNames[0] != "Name")
+                {
+                    throw new Exception(
+                        "Name Index 컬럼이 예상과 다릅니다.");
+                }
+
+                if (nameIndex.IsUnique)
+                {
+                    throw new Exception(
+                        "Name Index가 Unique로 설정되어 있습니다.");
+                }
+
+                if (emailIndex.IndexName !=
+                    "IX_IndexTest_Email")
+                {
+                    throw new Exception(
+                        "Email Index 이름이 예상과 다릅니다.");
+                }
+
+                if (emailIndex.ColumnNames == null ||
+                    emailIndex.ColumnNames.Length != 1 ||
+                    emailIndex.ColumnNames[0] != "Email")
+                {
+                    throw new Exception(
+                        "Email Index 컬럼이 예상과 다릅니다.");
+                }
+
+                if (!emailIndex.IsUnique)
+                {
+                    throw new Exception(
+                        "Email Index가 Unique로 설정되지 않았습니다.");
+                }
+
+                Console.WriteLine(
+                    "        Name Index : " +
+                    nameIndex.IndexName);
+
+                Console.WriteLine(
+                    "        Email Index : " +
+                    emailIndex.IndexName);
+
+                Console.WriteLine(
+                    "        Metadata 확인 PASS");
+
+                // ------------------------------------------------------------
+                // [17-2] 기존 객체 정리
+                // ------------------------------------------------------------
+
+                Console.WriteLine();
+                Console.WriteLine("    [17-2] 기존 테스트 객체 정리");
+
+                try
+                {
+                    schemaGenerator.Drop<IndexTestEntity>();
+                }
+                catch
+                {
+                    // 최초 실행 시 테이블이 없으면 무시합니다.
+                }
+
+                Console.WriteLine("        OK");
+
+                // ------------------------------------------------------------
+                // [17-3] Table + Index 생성
+                // ------------------------------------------------------------
+
+                Console.WriteLine();
+                Console.WriteLine(
+                    "    [17-3] Table + Index 생성");
+
+                int createdCount =
+                    schemaGenerator.Create<IndexTestEntity>();
+
+                Console.WriteLine(
+                    "        생성된 객체 수 : " +
+                    createdCount);
+
+                /*
+                 * 예상:
+                 *
+                 * 1 = Table
+                 * 2 = Index
+                 *
+                 * 총 3개
+                 */
+                if (createdCount != 3)
+                {
+                    throw new Exception(
+                        "생성된 객체 수가 예상과 다릅니다. " +
+                        "예상: 3, 실제: " +
+                        createdCount);
+                }
+
+                Console.WriteLine(
+                    "        Table + Index 생성 PASS");
+
+                // ------------------------------------------------------------
+                // [17-4] SQLite 실제 Index 확인
+                // ------------------------------------------------------------
+
+                Console.WriteLine();
+                Console.WriteLine(
+                    "    [17-4] SQLite 실제 Index 확인");
+
+                int indexCount = 0;
+
+                bool nameIndexExists = false;
+                bool emailIndexExists = false;
+                bool emailIndexUnique = false;
+
+                using (IDataReader reader =
+                    context.ExecuteReader(
+                        "PRAGMA index_list('IndexTest')"))
+                {
+                    while (reader.Read())
+                    {
+                        string indexName =
+                            Convert.ToString(
+                                reader["name"]);
+
+                        int isUnique =
+                            Convert.ToInt32(
+                                reader["unique"]);
+
+                        Console.WriteLine(
+                            "        Index={0}, Unique={1}",
+                            indexName,
+                            isUnique);
+
+                        if (indexName ==
+                            "IX_IndexTest_Name")
+                        {
+                            nameIndexExists = true;
+                            indexCount++;
+                        }
+
+                        if (indexName ==
+                            "IX_IndexTest_Email")
+                        {
+                            emailIndexExists = true;
+                            emailIndexUnique =
+                                isUnique == 1;
+
+                            indexCount++;
+                        }
+                    }
+                }
+
+                if (indexCount != 2)
+                {
+                    throw new Exception(
+                        "실제 SQLite Index 개수가 예상과 다릅니다. " +
+                        "예상: 2, 실제: " +
+                        indexCount);
+                }
+
+                if (!nameIndexExists)
+                {
+                    throw new Exception(
+                        "IX_IndexTest_Name이 생성되지 않았습니다.");
+                }
+
+                if (!emailIndexExists)
+                {
+                    throw new Exception(
+                        "IX_IndexTest_Email이 생성되지 않았습니다.");
+                }
+
+                if (!emailIndexUnique)
+                {
+                    throw new Exception(
+                        "IX_IndexTest_Email이 Unique Index가 아닙니다.");
+                }
+
+                Console.WriteLine(
+                    "        SQLite 실제 Index 확인 PASS");
+
+                // ------------------------------------------------------------
+                // [17-5] Index 삭제
+                // ------------------------------------------------------------
+
+                Console.WriteLine();
+                Console.WriteLine(
+                    "    [17-5] Index 삭제");
+
+                int droppedIndexCount =
+                    schemaGenerator.DropIndexes<IndexTestEntity>();
+
+                Console.WriteLine(
+                    "        삭제된 Index 수 : " +
+                    droppedIndexCount);
+
+                if (droppedIndexCount != 2)
+                {
+                    throw new Exception(
+                        "삭제된 Index 수가 예상과 다릅니다. " +
+                        "예상: 2, 실제: " +
+                        droppedIndexCount);
+                }
+
+                Console.WriteLine(
+                    "        Index 삭제 PASS");
+
+                // ------------------------------------------------------------
+                // [17-6] 실제 Index 삭제 확인
+                // ------------------------------------------------------------
+
+                Console.WriteLine();
+                Console.WriteLine(
+                    "    [17-6] SQLite Index 삭제 확인");
+
+                indexCount = 0;
+
+                using (IDataReader reader =
+                    context.ExecuteReader(
+                        "PRAGMA index_list('IndexTest')"))
+                {
+                    while (reader.Read())
+                    {
+                        string indexName =
+                            Convert.ToString(
+                                reader["name"]);
+
+                        if (indexName ==
+                            "IX_IndexTest_Name" ||
+                            indexName ==
+                            "IX_IndexTest_Email")
+                        {
+                            indexCount++;
+                        }
+                    }
+                }
+
+                if (indexCount != 0)
+                {
+                    throw new Exception(
+                        "Index 삭제 후에도 Index가 존재합니다. " +
+                        "실제: " +
+                        indexCount);
+                }
+
+                Console.WriteLine(
+                    "        실제 Index 삭제 확인 PASS");
+
+                // ------------------------------------------------------------
+                // [17-7] Table 삭제
+                // ------------------------------------------------------------
+
+                Console.WriteLine();
+                Console.WriteLine(
+                    "    [17-7] Table 삭제");
+
+                // ------------------------------------------------------------
+                // Table 존재 여부 확인
+                // ------------------------------------------------------------
+
+                bool tableExistsBeforeDrop = false;
+
+                using (IDataReader reader =
+                    context.ExecuteReader(
+                        "SELECT name " +
+                        "FROM sqlite_master " +
+                        "WHERE type = 'table' " +
+                        "AND name = 'IndexTest'"))
+                {
+                    tableExistsBeforeDrop = reader.Read();
+                }
+
+                Console.WriteLine(
+                    "        삭제 전 Table 존재 여부 : " +
+                    tableExistsBeforeDrop);
+
+                if (!tableExistsBeforeDrop)
+                {
+                    throw new Exception(
+                        "[17-7] DROP TABLE 실행 전에 " +
+                        "IndexTest Table이 존재하지 않습니다.");
+                }
+
+                // ------------------------------------------------------------
+                // DropTable()이 실제 Table을 삭제합니다.
+                // 반환값은 실행된 SQL 문자열입니다.
+                // ------------------------------------------------------------
+
+                string dropTableSql =
+                    schemaGenerator.DropTable<IndexTestEntity>();
+
+                Console.WriteLine(
+                    "        실행된 SQL : " +
+                    dropTableSql);
+
+                // ------------------------------------------------------------
+                // Table 실제 삭제 확인
+                // ------------------------------------------------------------
+
+                bool tableExistsAfterDrop = false;
+
+                using (IDataReader reader =
+                    context.ExecuteReader(
+                        "SELECT name " +
+                        "FROM sqlite_master " +
+                        "WHERE type = 'table' " +
+                        "AND name = 'IndexTest'"))
+                {
+                    tableExistsAfterDrop = reader.Read();
+                }
+
+                Console.WriteLine(
+                    "        삭제 후 Table 존재 여부 : " +
+                    tableExistsAfterDrop);
+
+                if (tableExistsAfterDrop)
+                {
+                    throw new Exception(
+                        "Table 삭제 후에도 IndexTest Table이 존재합니다.");
+                }
+
+                Console.WriteLine(
+                    "        실제 Table 삭제 확인 PASS");
+
+                Console.WriteLine();
+                Console.WriteLine(
+                    "    Index Metadata / Schema 테스트 PASS");
+            }
+            finally
+            {
+                try
+                {
+                    context.ExecuteNonQuery(
+                        "DROP TABLE IF EXISTS IndexTest");
+                }
+                catch
+                {
+                    // 테스트 정리 실패가 원래 예외를 가리지 않도록 합니다.
+                }
+
+                context.Dispose();
+            }
+        }
 
 
+        /// <summary>
+        /// Insert(entity, transaction)의 Commit 및 Rollback 동작을 테스트합니다.
+        /// </summary>
+        /// <param name="connectionString">
+        /// SQLite 데이터베이스 연결 문자열입니다.
+        /// </param>
+        private static void TestInsertTransaction(
+            string connectionString)
+        {
+            Console.WriteLine();
+            Console.WriteLine(
+                "[19-2] Insert Transaction Commit / Rollback 테스트");
+
+            //
+            // DatabaseContext 구성
+            //
+            SqliteConnectionFactory connectionFactory =
+                new SqliteConnectionFactory(
+                    connectionString);
+
+            SqliteParameterFactory parameterFactory =
+                new SqliteParameterFactory();
+
+            SqliteDialect dialect =
+                new SqliteDialect();
+
+            DatabaseContext context =
+                new DatabaseContext(
+                    connectionFactory,
+                    parameterFactory,
+                    dialect);
+
+            GenericRepository<TestUser> repository =
+                new GenericRepository<TestUser>(
+                    context);
+
+            //
+            // SchemaGenerator 구성
+            //
+            SqliteSchemaDialect schemaDialect =
+                new SqliteSchemaDialect();
+
+            SchemaGenerator schemaGenerator =
+                new SchemaGenerator(
+                    context,
+                    schemaDialect);
+
+            //
+            // TestUser 테이블 생성
+            //
+            schemaGenerator.CreateTable<TestUser>();
+
+            //
+            // 기존 테스트 데이터 정리
+            //
+            context.ExecuteNonQuery(
+                "DELETE FROM \"TestUser\"");
+
+            //
+            // [19-2-1] Commit 테스트
+            //
+            Console.WriteLine();
+            Console.WriteLine(
+                "    [19-2-1] Insert + Commit");
+
+            TestUser commitUser = new TestUser
+            {
+                Name = "Transaction Commit",
+                Age = 30
+            };
+
+            using (DatabaseTransaction transaction =
+                   context.BeginTransaction())
+            {
+                int affectedRows =
+                    repository.Insert(
+                        commitUser,
+                        transaction);
+
+                Console.WriteLine(
+                    "        Insert 영향 행 수 : " +
+                    affectedRows);
+
+                if (affectedRows != 1)
+                {
+                    throw new Exception(
+                        "Insert 영향 행 수가 1이 아닙니다.");
+                }
+
+                transaction.Commit();
+            }
+
+            List<TestUser> committedUsers =
+                repository.Query(
+                    "SELECT * FROM \"TestUser\" WHERE \"Name\" = @Name",
+                    new[]
+                    {
+                context.CreateParameter(
+                    "@Name",
+                    "Transaction Commit")
+                    });
+
+            if (committedUsers.Count != 1)
+            {
+                throw new Exception(
+                    "Commit 후 데이터가 존재하지 않습니다.");
+            }
+
+            if (committedUsers[0].Age != 30)
+            {
+                throw new Exception(
+                    "Commit 후 Age 값이 올바르지 않습니다.");
+            }
+
+            Console.WriteLine(
+                "        Commit 후 데이터 존재 확인");
+
+            Console.WriteLine(
+                "        Name : " +
+                committedUsers[0].Name);
+
+            Console.WriteLine(
+                "        Age  : " +
+                committedUsers[0].Age);
+
+            //
+            // [19-2-2] Rollback 테스트
+            //
+            Console.WriteLine();
+            Console.WriteLine(
+                "    [19-2-2] Insert + Rollback");
+
+            TestUser rollbackUser = new TestUser
+            {
+                Name = "Transaction Rollback",
+                Age = 40
+            };
+
+            using (DatabaseTransaction transaction =
+                   context.BeginTransaction())
+            {
+                int affectedRows =
+                    repository.Insert(
+                        rollbackUser,
+                        transaction);
+
+                Console.WriteLine(
+                    "        Insert 영향 행 수 : " +
+                    affectedRows);
+
+                if (affectedRows != 1)
+                {
+                    throw new Exception(
+                        "Insert 영향 행 수가 1이 아닙니다.");
+                }
+
+                transaction.Rollback();
+            }
+
+            List<TestUser> rollbackUsers =
+                repository.Query(
+                    "SELECT * FROM \"TestUser\" WHERE \"Name\" = @Name",
+                    new[]
+                    {
+                context.CreateParameter(
+                    "@Name",
+                    "Transaction Rollback")
+                    });
+
+            if (rollbackUsers.Count != 0)
+            {
+                throw new Exception(
+                    "Rollback 후에도 데이터가 존재합니다.");
+            }
+
+            Console.WriteLine(
+                "        Rollback 후 데이터 없음 확인");
+
+            Console.WriteLine();
+            Console.WriteLine(
+                "    Insert Transaction Commit / Rollback 테스트 PASS");
+        }
 
 
         //private static IDbDataParameter CreateParameter(
@@ -4421,6 +5026,177 @@ namespace Database.Net481.ConsoleTest
             public bool Active { get; set; }
         }
 
+        [Table("IndexTest")]
+        [Index("IX_IndexTest_Name", "Name")]
+        [Index("IX_IndexTest_Email", "Email", IsUnique = true)]
+        private sealed class IndexTestEntity
+        {
+            [Column(
+                "Id",
+                IsPrimaryKey = true,
+                IsInsertable = false,
+                IsUpdatable = false)]
+            public int Id { get; set; }
+
+            [Column("Name")]
+            public string Name { get; set; }
+
+            [Column("Email")]
+            public string Email { get; set; }
+        }
+
+
+        // ================================================================
+        // [18] Index 예외 / 경계 조건 테스트
+        // ================================================================
+
+        private static void TestIndexExceptions()
+        {
+            Console.WriteLine();
+            Console.WriteLine(
+                "[18] Index 예외 / 경계 조건 테스트");
+
+            // ------------------------------------------------------------
+            // [18-1] Index 이름이 비어 있는 경우
+            // ------------------------------------------------------------
+
+            Console.WriteLine();
+            Console.WriteLine(
+                "    [18-1] Index 이름 누락");
+
+            ExpectMetadataException<InvalidIndexNameEntity>(
+                "Index 이름 누락");
+
+            // ------------------------------------------------------------
+            // [18-2] Index Column이 없는 경우
+            // ------------------------------------------------------------
+
+            Console.WriteLine();
+            Console.WriteLine(
+                "    [18-2] Index Column 누락");
+
+            ExpectMetadataException<NoIndexColumnEntity>(
+                "Index Column 누락");
+
+            // ------------------------------------------------------------
+            // [18-3] Index Column 이름이 비어 있는 경우
+            // ------------------------------------------------------------
+
+            Console.WriteLine();
+            Console.WriteLine(
+                "    [18-3] Index Column 이름 누락");
+
+            ExpectMetadataException<EmptyIndexColumnEntity>(
+                "Index Column 이름 누락");
+
+            // ------------------------------------------------------------
+            // [18-4] 존재하지 않는 Column 참조
+            // ------------------------------------------------------------
+
+            Console.WriteLine();
+            Console.WriteLine(
+                "    [18-4] 존재하지 않는 Column 참조");
+
+            ExpectMetadataException<MissingIndexColumnEntity>(
+                "존재하지 않는 Column 참조");
+
+            // ------------------------------------------------------------
+            // 완료
+            // ------------------------------------------------------------
+
+            Console.WriteLine();
+            Console.WriteLine(
+                "    Index 예외 / 경계 조건 테스트 PASS");
+        }
+
+        // ================================================================
+        // Metadata 예외 검증 Helper
+        // ================================================================
+
+        private static void ExpectMetadataException<T>(
+            string testName)
+        {
+            try
+            {
+                EntityMetadataCache.GetMetadata<T>();
+
+                throw new Exception(
+                    testName +
+                    " 테스트에서 예외가 발생하지 않았습니다.");
+            }
+            catch (InvalidOperationException ex)
+            {
+                Console.WriteLine(
+                    "        예외 발생 PASS");
+
+                Console.WriteLine(
+                    "        Message : " +
+                    ex.Message);
+            }
+            catch (ArgumentException ex)
+            {
+                Console.WriteLine(
+                    "        예외 발생 PASS");
+
+                Console.WriteLine(
+                    "        Message : " +
+                    ex.Message);
+            }
+        }
+
+        // ================================================================
+        // [18] 테스트 Entity
+        // ================================================================
+
+        [Table("InvalidIndexNameTest")]
+        [Index("", "Name")]
+        private sealed class InvalidIndexNameEntity
+        {
+            [Column("Id", IsPrimaryKey = true)]
+            public int Id { get; set; }
+
+            [Column("Name")]
+            public string Name { get; set; }
+        }
+
+        [Table("NoIndexColumnTest")]
+        [Index(
+            "IX_NoIndexColumn",
+            new string[] { })]
+        private sealed class NoIndexColumnEntity
+        {
+            [Column("Id", IsPrimaryKey = true)]
+            public int Id { get; set; }
+
+            [Column("Name")]
+            public string Name { get; set; }
+        }
+
+        [Table("EmptyIndexColumnTest")]
+        [Index("IX_EmptyIndexColumn", "")]
+        private sealed class EmptyIndexColumnEntity
+        {
+            [Column("Id", IsPrimaryKey = true)]
+            public int Id { get; set; }
+
+            [Column("Name")]
+            public string Name { get; set; }
+        }
+
+        [Table("MissingIndexColumnTest")]
+        [Index("IX_MissingIndexColumn", "NotExist")]
+        private sealed class MissingIndexColumnEntity
+        {
+            [Column("Id", IsPrimaryKey = true)]
+            public int Id { get; set; }
+
+            [Column("Name")]
+            public string Name { get; set; }
+        }
+
+
+
+
 
         private static List<IDbDataParameter> CreateParameters(
             IDbConnection connection,
@@ -4450,6 +5226,9 @@ namespace Database.Net481.ConsoleTest
 
             return parameters;
         }
+
+
+
 
 
     }
